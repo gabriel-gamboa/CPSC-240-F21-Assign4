@@ -1,0 +1,10 @@
+b main
+r
+n
+p/x $rsp
+n
+n
+x/s &programmers_name
+p/f xmm14.v2_double[0]
+c
+q

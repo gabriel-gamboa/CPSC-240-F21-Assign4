@@ -1,0 +1,332 @@
+     1                                  ;****************************************************************************************************************************
+     2                                  ;Program name: "Assignment 4".  This program greets a user by their inputted name  *
+     3                                  ;and title.  Copyright (C) 2021  Gabriel Gamboa                                                                                 *
+     4                                  ;This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License  *
+     5                                  ;version 3 as published by the Free Software Foundation.                                                                    *
+     6                                  ;This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied         *
+     7                                  ;warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.     *
+     8                                  ;A copy of the GNU General Public License v3 is available here:  <https://www.gnu.org/licenses/>.                           *
+     9                                  ;****************************************************************************************************************************
+    10                                  
+    11                                  ;========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1=========2=========3=========4=========5=========6=========7**
+    12                                  ;Author information
+    13                                  ;  Author name: Gabriel Gamboa
+    14                                  ;  Author email: gabe04@csu.fullerton.edu
+    15                                  ;
+    16                                  ;Program information
+    17                                  ; Program name: Assignment 4
+    18                                  ;  Programming languages X86 with one module in C and one module in C++
+    19                                  ;  Date program began 2021-Nov-11
+    20                                  ;  Date program completed 2021-Nov-14
+    21                                  ;
+    22                                  ;Purpose
+    23                                  ;  This program takes the value of resistance and current and
+    24                                  ;  returns the power computation if inputs are valid, otherwise
+    25                                  ;  it tells user to try again
+    26                                  ;Project information
+    27                                  ;  Files: maxwell.c, hertz.asm, r.sh
+    28                                  ;  Status: The program has been tested extensively with no detectable errors.
+    29                                  ;
+    30                                  ;Translator information
+    31                                  ;  Linux: nasm -f elf64 -l hertz.lis -o hertz.o hertz.asm
+    32                                  
+    33                                  
+    34                                  ;============================================================================================================================================================
+    35                                  
+    36                                  
+    37                                  ;===== Begin code area ============================================================================================================
+    38                                  extern printf
+    39                                  extern scanf
+    40                                  extern fgets
+    41                                  extern strlen
+    42                                  extern stdin
+    43                                  extern atof
+    44                                  extern ispositivefloat
+    45                                  global power
+    46                                  
+    47                                  segment .data
+    48                                  align 16
+    49 00000000 57652077696C6C2066-     purpose db "We will find your power.", 10, 0
+    49 00000009 696E6420796F757220-
+    49 00000012 706F7765722E0A00   
+    50 0000001A 506C6561736520656E-     promptname db "Please enter your name.  You choose the format of your name: ", 0
+    50 00000023 74657220796F757220-
+    50 0000002C 6E616D652E2020596F-
+    50 00000035 752063686F6F736520-
+    50 0000003E 74686520666F726D61-
+    50 00000047 74206F6620796F7572-
+    50 00000050 206E616D653A2000   
+    51 00000058 57656C636F6D652025-     welcome_message db "Welcome %s.", 10, 0
+    51 00000061 732E0A00           
+    52 00000065 496E76616C69642069-     mess db "Invalid input detected.  You may run this program again", 10, 0
+    52 0000006E 6E7075742064657465-
+    52 00000077 637465642E2020596F-
+    52 00000080 75206D61792072756E-
+    52 00000089 20746869732070726F-
+    52 00000092 6772616D2061676169-
+    52 0000009B 6E0A00             
+    53 0000009E 506C6561736520656E-     resprompt db "Please enter the resistance in your circuit: ", 0
+    53 000000A7 746572207468652072-
+    53 000000B0 6573697374616E6365-
+    53 000000B9 20696E20796F757220-
+    53 000000C2 636972637569743A20-
+    53 000000CB 00                 
+    54 000000CC 506C6561736520656E-     curprompt db "Please enter the current flow in this circuit: ",0
+    54 000000D5 746572207468652063-
+    54 000000DE 757272656E7420666C-
+    54 000000E7 6F7720696E20746869-
+    54 000000F0 732063697263756974-
+    54 000000F9 3A2000             
+    55 000000FC 5468616E6B20796F75-     pc_message db "Thank you %s.  Your power consumption is %5.9lf watts.", 10, 0
+    55 00000105 2025732E2020596F75-
+    55 0000010E 7220706F7765722063-
+    55 00000117 6F6E73756D7074696F-
+    55 00000120 6E2069732025352E39-
+    55 00000129 6C662077617474732E-
+    55 00000132 0A00               
+    56 00000134 256C6600                one_float_format db "%lf",0
+    57 00000138 257300                  stringform db "%s", 0
+    58 0000013B 90<rep 5h>              align 64
+    59                                  segment .bss  ;Reserved for uninitialized data
+    60                                  
+    61 00000000 <res 100h>              programmers_name resb 256                  ;256 byte space created
+    62 00000100 <res 100h>              res_string resb 256                        ;256 byte space created
+    63 00000200 <res 100h>              cur_string resb 256                        ;256 byte space created
+    64                                  
+    65                                  segment .text ;Reserved for executing instructions.
+    66                                  
+    67                                  power:
+    68                                  
+    69                                  ;=============================================================================================
+    70                                  ;back up data in registers
+    71 00000000 55                      push rbp
+    72 00000001 4889E5                  mov  rbp,rsp
+    73 00000004 57                      push rdi                                                    ;Backup rdi
+    74 00000005 56                      push rsi                                                    ;Backup rsi
+    75 00000006 52                      push rdx                                                    ;Backup rdx
+    76 00000007 51                      push rcx                                                    ;Backup rcx
+    77 00000008 4150                    push r8                                                     ;Backup r8
+    78 0000000A 4151                    push r9                                                     ;Backup r9
+    79 0000000C 4152                    push r10                                                    ;Backup r10
+    80 0000000E 4153                    push r11                                                    ;Backup r11
+    81 00000010 4154                    push r12                                                    ;Backup r12
+    82 00000012 4155                    push r13                                                    ;Backup r13
+    83 00000014 4156                    push r14                                                    ;Backup r14
+    84 00000016 4157                    push r15                                                    ;Backup r15
+    85 00000018 53                      push rbx                                                    ;Backup rbx
+    86 00000019 9C                      pushf                                                       ;Backup rflags
+    87                                  
+    88                                  
+    89                                  ;====================================================================================================================================================
+    90                                  
+    91 0000001A B800000000              mov rax, 0                     ;A zero in rax means printf uses no data from xmm registers.
+    92 0000001F 48BF-                   mov rdi, purpose               ;"We will find your power."
+    92 00000021 [0000000000000000] 
+    93 00000029 E8(00000000)            call printf
+    94                                  
+    95                                  
+    96                                  ;=========== Prompt for user's name =================================================================================================================================
+    97                                  
+    98 0000002E B800000000              mov qword  rax, 0                                           ;No floats used
+    99 00000033 48BF-                   mov        rdi, stringform                                ;
+    99 00000035 [3801000000000000] 
+   100 0000003D 48BE-                   mov        rsi, promptname                                  ;"Please enter your name.  You choose the format of your name: "
+   100 0000003F [1A00000000000000] 
+   101 00000047 E8(00000000)            call       printf                                           ;C++ printf() function handles the output
+   102                                  
+   103                                  ;===== Obtain the programmer's name =============================================================================================================================================
+   104                                  
+   105                                  
+   106 0000004C B800000000              mov qword rax, 0                                            ;no floats in scanf?
+   107 00000051 48BF-                   mov       rdi, programmers_name                             ;Start of array address to rdi
+   107 00000053 [0000000000000000] 
+   108 0000005B BE00010000              mov       rsi, 256                                           ;Size of input available to fgets for inputs
+   109 00000060 488B1425[00000000]      mov       rdx, [stdin]                                      ;rdx gets the inputting thing
+   110 00000068 E8(00000000)            call      fgets                                             ;gets a line of text less than 255 chars or stops when NULL is reached
+   111                                  
+   112                                  ;remove new line character from input of programmer name
+   113 0000006D B800000000              mov rax, 0                                              ;No floats used
+   114 00000072 48BF-                   mov rdi, programmers_name                               ;Once the name is in rdi we can call strlen to get the length of the name. rdi is parameter in strlen
+   114 00000074 [0000000000000000] 
+   115 0000007C E8(00000000)            call strlen                                             ;call the C function strlen to get length
+   116 00000081 4989C6                  mov r14, rax                                            ;r14 contains the length of the string. I guess it's stored in rax after strlen is called
+   117 00000084 41BF00000000            mov r15, 0                                              ;i was having bugs and heard this helps, not sure if this was ultimately what did the trick
+   118 0000008A 4D89BE[FFFFFFFF]        mov [programmers_name + r14 -1],r15                     ;changed to 256 bytes of reserved data for programmer name instead of 32 bytes cause a test case was getting cut off
+   119                                                                                          ;we replace it with 0 so that's why we do the ,r15
+   120                                                                                          ;i don't know why we have to put in the [hello.programmers_name + r14 - 1]
+   121                                                                                          ;or what the brackets are for. I'd think it would work without the hello.programmers_name, assuming the length is stored in r14
+   122                                  
+   123                                  ;============================================================================================================================================================================================
+   124                                  
+   125 00000091 B800000000              mov qword  rax, 0                                           ;No floats used
+   126 00000096 48BF-                   mov        rdi, welcome_message                             ;"Welcome %s. "
+   126 00000098 [5800000000000000] 
+   127 000000A0 48BE-                   mov        rsi, programmers_name
+   127 000000A2 [0000000000000000] 
+   128 000000AA E8(00000000)            call       printf                                           ;C printf() function handles the output
+   129                                  
+   130                                  
+   131                                  
+   132                                  ;===================Prompt user for resistance ===================================================================================================================================================
+   133                                  
+   134 000000AF B800000000              mov rax, 0                            ;format for printf, no floats used
+   135 000000B4 48BF-                   mov rdi, resprompt                    ;"Please enter the resistance in your circuit: "
+   135 000000B6 [9E00000000000000] 
+   136 000000BE E8(00000000)            call printf                           ;prints out resprompt
+   137                                  
+   138                                  
+   139                                  ;===== Obtain the resistance value and validate=============================================================================================================================================
+   140                                  
+   141                                  ;set up scanf for res_string
+   142 000000C3 B800000000              mov rax, 0
+   143 000000C8 48BF-                   mov rdi, stringform
+   143 000000CA [3801000000000000] 
+   144 000000D2 48BE-                   mov rsi, res_string
+   144 000000D4 [0001000000000000] 
+   145 000000DC E8(00000000)            call scanf
+   146                                  
+   147                                  
+   148                                  ;check input value for float
+   149 000000E1 B800000000              mov rax, 0
+   150 000000E6 48BF-                   mov rdi, res_string
+   150 000000E8 [0001000000000000] 
+   151 000000F0 E8(00000000)            call ispositivefloat
+   152 000000F5 4989C7                  mov r15, rax        ;r15 {0 is invalid, 1 is valid}
+   153                                  
+   154                                  ;check whether input is valid or not
+   155 000000F8 4983FF00                cmp r15, 0
+   156 000000FC 7522                    jne validprocess
+   157                                  
+   158                                  ;message run again
+   159 000000FE B800000000              mov rax, 0
+   160 00000103 48BF-                   mov rdi, mess
+   160 00000105 [6500000000000000] 
+   161 0000010D E8(00000000)            call printf
+   162                                  
+   163                                  ;create -1.0 to return to driver for invalid inputs
+   164 00000112 6AFF                    push qword -1            ;push qword onto stack so we can convert it to float format to use in our calculations
+   165 00000114 F2440F2A3424            cvtsi2sd xmm14, [rsp]   ;convert -1 to -1.0 and store it in xmmm15
+   166 0000011A 58                      pop rax                 ;why do we need to pop rax. what is in it?
+   167                                  
+   168 0000011B E9CD000000              jmp continue
+   169                                  
+   170                                  ;if valid, convert string to float
+   171                                  validprocess:
+   172 00000120 B800000000              mov rax, 0
+   173 00000125 48BF-                   mov rdi, res_string
+   173 00000127 [0001000000000000] 
+   174 0000012F E8(00000000)            call atof
+   175 00000134 F2440F10E8              movsd xmm13, xmm0
+   176                                  ;Done w/ input data validation
+   177                                  
+   178                                  ;============================================================================================================================================================================================
+   179                                  
+   180                                  
+   181                                  
+   182                                  ;=======Prompt user for current =====================================================================================================================================================================================
+   183                                  
+   184                                  
+   185 00000139 B800000000              mov rax, 0                            ;format for printf, no floats used
+   186 0000013E 48BF-                   mov rdi, curprompt                    ;"Please enter the current flow in this circuit: "
+   186 00000140 [CC00000000000000] 
+   187 00000148 E8(00000000)            call printf                           ;prints out curprompt
+   188                                  
+   189                                  ;=======Obtain the current value and validate===============================================================================================================================================
+   190                                  
+   191                                  ;set up scanf for res_string
+   192 0000014D B800000000              mov rax, 0
+   193 00000152 48BF-                   mov rdi, stringform
+   193 00000154 [3801000000000000] 
+   194 0000015C 48BE-                   mov rsi, cur_string
+   194 0000015E [0002000000000000] 
+   195 00000166 E8(00000000)            call scanf
+   196                                  
+   197                                  
+   198                                  ;check input value for float
+   199 0000016B B800000000              mov rax, 0
+   200 00000170 48BF-                   mov rdi, cur_string
+   200 00000172 [0002000000000000] 
+   201 0000017A E8(00000000)            call ispositivefloat
+   202 0000017F 4989C7                  mov r15, rax        ;r15 {0 is invalid, 1 is valid}
+   203                                  
+   204                                  ;check whether input is valid or not
+   205 00000182 4983FF00                cmp r15, 0
+   206 00000186 751F                    jne validp
+   207                                  
+   208                                  ;message run again
+   209 00000188 B800000000              mov rax, 0
+   210 0000018D 48BF-                   mov rdi, mess
+   210 0000018F [6500000000000000] 
+   211 00000197 E8(00000000)            call printf
+   212                                  
+   213                                  ;create -1.0 to return to driver for invalid inputs
+   214 0000019C 6AFF                    push qword -1            ;push qword onto stack so we can convert it to float format to use in our calculations
+   215 0000019E F2440F2A3424            cvtsi2sd xmm14, [rsp]   ;convert 2 to 2.0 and store it in xmmm15
+   216 000001A4 58                      pop rax                 ;why do we need to pop rax. what is in it?
+   217                                  
+   218 000001A5 EB46                    jmp continue
+   219                                  
+   220                                  ;if valid, convert string to float
+   221                                  validp:
+   222 000001A7 B800000000              mov rax, 0
+   223 000001AC 48BF-                   mov rdi, cur_string
+   223 000001AE [0002000000000000] 
+   224 000001B6 E8(00000000)            call atof
+   225 000001BB F2440F10F0              movsd xmm14, xmm0
+   226                                  ;Done w/ input data validation
+   227                                  
+   228                                  ;============================================================================================================================================================================================
+   229                                  
+   230                                  
+   231                                  
+   232                                  
+   233                                  ;============= Begin arithmetic section  ===============================================================
+   234                                  
+   235                                  ;push qword 0            ;why do we do this?
+   236 000001C0 B801000000              mov rax, 1              ;1 floating point number will be passed into printf
+   237 000001C5 48BF-                   mov rdi, pc_message   ;"Thank you %s.  Your power consumption is %5.9lf watts.."
+   237 000001C7 [FC00000000000000] 
+   238 000001CF 48BE-                   mov rsi, programmers_name
+   238 000001D1 [0000000000000000] 
+   239 000001D9 F2450F59F6              mulsd xmm14, xmm14      ;computes the area of the right triangle and stores it in xmm14
+   240 000001DE F2450F59F5              mulsd xmm14,xmm13        ;printf prints out starting in xmm0?
+   241 000001E3 F2410F10C6              movsd xmm0, xmm14
+   242 000001E8 E8(00000000)            call printf
+   243                                  ;pop rax
+   244                                  
+   245                                  
+   246                                  
+   247                                  
+   248                                  
+   249                                  ;============= End of arightmetic section ==============================================================
+   250                                  
+   251                                  
+   252                                  
+   253                                  ;============================================================================================================
+   254                                  
+   255                                  continue:                     ;invalid input jumps to this part
+   256 000001ED F2410F10C6              movsd xmm0, xmm14              ;power return to caller.
+   257                                  
+   258                                  ;=================================================================================================================
+   259                                  
+   260                                  
+   261                                  ;===== Restore backed up registers ===============================================================================
+   262 000001F2 9D                      popf                                                        ;Restore rflags
+   263 000001F3 5B                      pop rbx                                                     ;Restore rbx
+   264 000001F4 415F                    pop r15                                                     ;Restore r15
+   265 000001F6 415E                    pop r14                                                     ;Restore r14
+   266 000001F8 415D                    pop r13                                                     ;Restore r13
+   267 000001FA 415C                    pop r12                                                     ;Restore r12
+   268 000001FC 415B                    pop r11                                                     ;Restore r11
+   269 000001FE 415A                    pop r10                                                     ;Restore r10
+   270 00000200 4159                    pop r9                                                      ;Restore r9
+   271 00000202 4158                    pop r8                                                      ;Restore r8
+   272 00000204 59                      pop rcx                                                     ;Restore rcx
+   273 00000205 5A                      pop rdx                                                     ;Restore rdx
+   274 00000206 5E                      pop rsi                                                     ;Restore rsi
+   275 00000207 5F                      pop rdi                                                     ;Restore rdi
+   276 00000208 5D                      pop rbp                                                     ;Restore rbp
+   277                                  
+   278 00000209 C3                      ret
+   279                                  
+   280                                  ;========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1=========2=========3**
